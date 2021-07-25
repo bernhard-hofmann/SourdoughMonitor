@@ -47,11 +47,18 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 // Time of flight distance sensor
 Adafruit_VL6180X vl = Adafruit_VL6180X();
 
-unsigned int insertionIndex = 0;
-// 86400 = one value per second for 24 hours
-float humidity[86400];
-float temperature[86400];
-float range[86400];
+word insertionIndex = 0;
+// 86400 = one value per 1 seconds for 24 hours
+// 17280 = one value per 5 seconds for 24 hours
+const int maxSamples = 17280;
+// Temperature is stored as 10x the difference from a baseline of 20 degrees C
+// E.g. 23.6C is +3.6C from 20C, stored as 36 (10x) (Max 127 = 20+12.7 = 32.7 Min -128 = 20-12.8 = 7.2)
+const byte tempBaseLine = 20;
+char temperatureSamples[maxSamples];
+// Humidity is relative % (i.e. values 0-100) and stored without decimal places
+char humiditySamples[maxSamples];
+// Range is 0-255
+byte rangeSamples[maxSamples];
 
 void setup() {
   Serial.begin(9600);
@@ -91,6 +98,11 @@ void setup() {
   Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
   Serial.println(F("------------------------------------"));
 
+  if (!vl.begin()) {
+    Serial.println("Failed to find sensor");
+    while (1);
+  }
+
   // WiFi
   WiFi.begin(ssid, password);
   Serial.print("WiFi connecting");
@@ -103,12 +115,6 @@ void setup() {
   Serial.println(WiFi.localIP());
   WiFi.printDiag(Serial);
   Serial.println(F("------------------------------------"));
-
-  if (! vl.begin()) {
-    Serial.println("Failed to find sensor");
-    while (1);
-  }
-  Serial.println("Sensor found!");
 }
 
 void loop() {
@@ -151,7 +157,7 @@ void loop() {
     Serial.println(F("%"));
   }
 
-  uint8_t range = vl.readRange();
+  byte range = vl.readRange();
   uint8_t status = vl.readRangeStatus();
 
   if (status == VL6180X_ERROR_NONE) {
@@ -224,6 +230,26 @@ void loop() {
       Serial.println("WiFi Disconnected");
     }
   // endregion WiFi POST
+
+  // region Store data samples
+  Serial.print("Inserting data at position ");
+  Serial.print(insertionIndex);
+  Serial.print(". Temp=");
+  Serial.printf("%d", (char)((temp - tempBaseLine)*10));
+  //temperatureSamples[insertionIndex] = (char)((temp - tempBaseLine)*10);
+  Serial.print(". RelHum=");
+  Serial.printf("%d", (char)humd);
+  humiditySamples[insertionIndex] = (char)humd;
+  Serial.print(". Range=");
+  Serial.printf("%d", (byte)range);
+  Serial.println();
+  rangeSamples[insertionIndex] = (byte)range;
+
+  insertionIndex++;
+  if (insertionIndex > maxSamples - 1) {
+    insertionIndex = 0;
+  }
+  // end Store data samples
 
   display.display();
   delay(5000);
