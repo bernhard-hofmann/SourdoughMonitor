@@ -7,6 +7,19 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+#include "/home/bernhard/github/bernhard-hofmann/SourdoughMonitorSecrets.h"
+/*
+The secrets file is stored outside the repository folder and contains the following values:
+const char *ssid = "<YOUR WIFI SSID>";
+const char *password = "<YOUR WIFI PASSWORD>";
+const char *iotPlotterUrl = "http://iotplotter.com/api/v2/feed/<YOUR FEED ID>";
+const char *iotPlotterApiKey = "<YOUR API KEY>";
+
+*/
+
 // Time of flight distance sensor
 #include <Adafruit_VL6180X.h>
 
@@ -33,6 +46,12 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 
 // Time of flight distance sensor
 Adafruit_VL6180X vl = Adafruit_VL6180X();
+
+unsigned int insertionIndex = 0;
+// 86400 = one value per second for 24 hours
+float humidity[86400];
+float temperature[86400];
+float range[86400];
 
 void setup() {
   Serial.begin(9600);
@@ -72,6 +91,19 @@ void setup() {
   Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
   Serial.println(F("------------------------------------"));
 
+  // WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("WiFi connecting");
+  while ( WiFi.status() != WL_CONNECTED ) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.print("WiFi connected, IP address: ");
+  Serial.println(WiFi.localIP());
+  WiFi.printDiag(Serial);
+  Serial.println(F("------------------------------------"));
+
   if (! vl.begin()) {
     Serial.println("Failed to find sensor");
     while (1);
@@ -87,7 +119,9 @@ void loop() {
   display.setCursor(0, 0);     // Start at top-left corner
   display.cp437(true);         // Use full 256 char 'Code Page 437' font
 
-  char buf[21];
+  char buf[1024];
+  float temp = 0.0;
+  float humd = 0.0;
   // Get temperature event and print its value.
   sensors_event_t event;
   dht.temperature().getEvent(&event);
@@ -95,6 +129,7 @@ void loop() {
     Serial.println(F("Error reading temperature!"));
   }
   else {
+    temp = event.temperature;
     sprintf(buf, "Temp: %f", event.temperature);
     display.println(buf);
 
@@ -108,6 +143,7 @@ void loop() {
     Serial.println(F("Error reading humidity!"));
   }
   else {
+    humd = event.relative_humidity;
     sprintf(buf, "Humd: %f", event.relative_humidity);
     display.println(buf);
     Serial.print(F("Humidity: "));
@@ -162,6 +198,33 @@ void loop() {
     Serial.println("Range reading overflow");
   }
 
+  // region WiFi POST
+  if (WiFi.status()== WL_CONNECTED){
+      WiFiClient client;
+      HTTPClient http;
+
+      // Your Domain name with URL path or IP address with path
+      Serial.print("Sending data to ");
+      Serial.println(iotPlotterUrl);
+      http.begin(client, iotPlotterUrl);
+
+      // Specify content-type header
+      http.addHeader("api-key", iotPlotterApiKey);
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      // Data to send with HTTP POST
+      sprintf(buf, "{\"data\":{\"Temperature\":[{\"value\":%f}],\"Humidity\":[{\"value\":%f}], \"Range\":[{\"value\":%d}]}}", temp, humd, range);
+      Serial.print("Sending: "); Serial.println(buf);
+      int httpResponseCode = http.POST(buf);
+      Serial.print("HTTP: "); Serial.println(httpResponseCode);
+
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+  // endregion WiFi POST
+
   display.display();
-  delay(1000);
+  delay(5000);
 }
