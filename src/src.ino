@@ -12,11 +12,11 @@
 #include <WiFiClient.h>
 #include "/home/bernhard/github/bernhard-hofmann/SourdoughMonitorSecrets.h"
 /*
-The secrets file is stored outside the repository folder and contains the following values:
-const char *ssid = "<YOUR WIFI SSID>";
-const char *password = "<YOUR WIFI PASSWORD>";
-const char *iotPlotterUrl = "http://iotplotter.com/api/v2/feed/<YOUR FEED ID>";
-const char *iotPlotterApiKey = "<YOUR API KEY>";
+  The secrets file is stored outside the repository folder and contains the following values:
+  const char *ssid = "<YOUR WIFI SSID>";
+  const char *password = "<YOUR WIFI PASSWORD>";
+  const char *iotPlotterUrl = "http://iotplotter.com/api/v2/feed/<YOUR FEED ID>";
+  const char *iotPlotterApiKey = "<YOUR API KEY>";
 
 */
 
@@ -61,6 +61,8 @@ char humiditySamples[maxSamples];
 byte rangeSamples[maxSamples];
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+
   Serial.begin(9600);
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -70,10 +72,14 @@ void setup() {
   }
   display.clearDisplay();
 
-  pinMode(LED_BUILTIN, OUTPUT);
+  InitializeTempAndHumiditySensor();
+  InitializeDistanceSensor();
+  InitializeWiFi();
+}
 
-  // Initialize device.
+void InitializeTempAndHumiditySensor() {
   dht.begin();
+
   Serial.println(F("DHTxx Unified Sensor Example"));
   // Print temperature sensor details.
   sensor_t sensor;
@@ -97,12 +103,16 @@ void setup() {
   Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("%"));
   Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
   Serial.println(F("------------------------------------"));
+}
 
+void InitializeDistanceSensor() {
   if (!vl.begin()) {
     Serial.println("Failed to find sensor");
     while (1);
   }
+}
 
+void InitializeWiFi() {
   // WiFi
   WiFi.begin(ssid, password);
   Serial.print("WiFi connecting");
@@ -125,9 +135,11 @@ void loop() {
   display.setCursor(0, 0);     // Start at top-left corner
   display.cp437(true);         // Use full 256 char 'Code Page 437' font
 
-  char buf[1024];
+  char buf[128];
   float temp = 0.0;
   float humd = 0.0;
+  byte range;
+
   // Get temperature event and print its value.
   sensors_event_t event;
   dht.temperature().getEvent(&event);
@@ -157,7 +169,7 @@ void loop() {
     Serial.println(F("%"));
   }
 
-  byte range = vl.readRange();
+  range = vl.readRange();
   uint8_t status = vl.readRangeStatus();
 
   if (status == VL6180X_ERROR_NONE) {
@@ -205,37 +217,19 @@ void loop() {
   }
 
   // region WiFi POST
-  if (WiFi.status()== WL_CONNECTED){
-      WiFiClient client;
-      HTTPClient http;
-
-      // Your Domain name with URL path or IP address with path
-      Serial.print("Sending data to ");
-      Serial.println(iotPlotterUrl);
-      http.begin(client, iotPlotterUrl);
-
-      // Specify content-type header
-      http.addHeader("api-key", iotPlotterApiKey);
-      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      // Data to send with HTTP POST
-      sprintf(buf, "{\"data\":{\"Temperature\":[{\"value\":%f}],\"Humidity\":[{\"value\":%f}], \"Range\":[{\"value\":%d}]}}", temp, humd, range);
-      Serial.print("Sending: "); Serial.println(buf);
-      int httpResponseCode = http.POST(buf);
-      Serial.print("HTTP: "); Serial.println(httpResponseCode);
-
-      // Free resources
-      http.end();
-    }
-    else {
-      Serial.println("WiFi Disconnected");
-    }
+  if (WiFi.status() == WL_CONNECTED) {
+    SendToCloud(temp, humd, range);
+  }
+  else {
+    Serial.println("WiFi Disconnected");
+  }
   // endregion WiFi POST
 
   // region Store data samples
   Serial.print("Inserting data at position ");
   Serial.print(insertionIndex);
   Serial.print(". Temp=");
-  Serial.printf("%d", (char)((temp - tempBaseLine)*10));
+  Serial.printf("%d", (char)((temp - tempBaseLine) * 10));
   //temperatureSamples[insertionIndex] = (char)((temp - tempBaseLine)*10);
   Serial.print(". RelHum=");
   Serial.printf("%d", (char)humd);
@@ -253,4 +247,28 @@ void loop() {
 
   display.display();
   delay(5000);
+}
+
+void SendToCloud(float temp, float humd, byte range) {
+  WiFiClient client;
+  HTTPClient http;
+  char buf[1024];
+
+
+  // Your Domain name with URL path or IP address with path
+  Serial.print("Sending data to ");
+  Serial.println(iotPlotterUrl);
+  http.begin(client, iotPlotterUrl);
+
+  // Specify content-type header
+  http.addHeader("api-key", iotPlotterApiKey);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  // Data to send with HTTP POST
+  sprintf(buf, "{\"data\":{\"Temperature\":[{\"value\":%f}],\"Humidity\":[{\"value\":%f}], \"Range\":[{\"value\":%d}]}}", temp, humd, range);
+  Serial.print("Sending: "); Serial.println(buf);
+  int httpResponseCode = http.POST(buf);
+  Serial.print("HTTP: "); Serial.println(httpResponseCode);
+
+  // Free resources
+  http.end();
 }
