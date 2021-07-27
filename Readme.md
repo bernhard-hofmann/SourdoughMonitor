@@ -6,7 +6,7 @@ This sourdough monitor is an ESP8266-based project with components to monitor hu
 
 ## Design Choices
 
-Whilst this project was inspired by [Justin Lam's Levain Monitor](https://www.justinmklam.com/posts/2021/02/levain-monitor/), it is mostly a completely new codebase and design. Also [on GitHub](https://github.com/justinmklam/iot-sourdough-starter-monitor).
+Whilst this project was inspired by [Justin Lam's Levain Monitor](https://www.justinmklam.com/posts/2021/02/levain-monitor/), it is mostly a completely new codebase and design because we could not get the PlatformIO code to work. You can also find [his project on GitHub](https://github.com/justinmklam/iot-sourdough-starter-monitor).
 
 1. The system must be funcitonal/useful even if no cloud storage or web app is used. This makes it more accessible to beginners or those who want a simpler option.
 1. No decision is made with respect to power source. The sensors are all powered from the ESP, but the ESP could be powered by battery, USB, or power adapter.
