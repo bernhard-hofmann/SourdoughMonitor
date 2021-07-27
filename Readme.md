@@ -4,7 +4,19 @@
 
 This sourdough monitor is an ESP8266-based project with components to monitor humidty, temperature, and the height of the starter in the container that the monitor is installed atop. Basic information is shown on an OLED 128x32 screen and data is sent to an IoT cloud store.
 
-## Design Choices
+## Getting started
+
+The code is designed to be built with the Arduino IDE but it requires a number of libraries that are not installed by default. The libraries that need to be added are:
+
+-  Adafruit_GFX
+-  Adafruit_SSD1306
+-  Adafruit_VL6180X
+-  DHT
+-  ESP8266WiFi
+-  ESP8266HTTPClient
+-  WiFiClient
+
+## Design choices
 
 Whilst this project was inspired by [Justin Lam's Levain Monitor](https://www.justinmklam.com/posts/2021/02/levain-monitor/), it is mostly a completely new codebase and design because we could not get the PlatformIO code to work. You can also find [his project on GitHub](https://github.com/justinmklam/iot-sourdough-starter-monitor).
 
