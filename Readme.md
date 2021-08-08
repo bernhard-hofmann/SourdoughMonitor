@@ -4,6 +4,8 @@
 
 This sourdough monitor is an ESP8266-based project with components to monitor humidty, temperature, and the height of the starter in the container that the monitor is installed atop. Basic information is shown on an OLED 128x32 screen and data is sent to an IoT cloud store.
 
+The circuit for this project can be see on Circuito at https://www.circuito.io/app?components=97,514,10167,219866,360216,985157
+
 ## Getting started
 
 The code is designed to be built with the Arduino IDE but it requires a number of libraries that are not installed by default. The libraries that need to be added are:

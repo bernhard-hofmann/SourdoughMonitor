@@ -7,6 +7,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#include "Button.h"
+
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
@@ -35,6 +37,8 @@
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+#define PUSHBUTTON_PIN_2  14
+
 // DHT
 #define DHTPIN 10     // Digital pin connected to the DHT sensor 
 
@@ -60,8 +64,11 @@ char humiditySamples[maxSamples];
 // Range is 0-255
 byte rangeSamples[maxSamples];
 
+Button pushButton(PUSHBUTTON_PIN_2);
+
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
+  pushButton.init();
 
   Serial.begin(9600);
 
@@ -128,132 +135,144 @@ void InitializeWiFi() {
 }
 
 void loop() {
-  display.clearDisplay();
+  unsigned long currentMillis = millis();
+  if (currentMillis % 5000 == 0) {
+    display.clearDisplay();
 
-  display.setTextSize(1);      // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setCursor(0, 0);     // Start at top-left corner
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+    display.setTextSize(1);      // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE); // Draw white text
+    display.setCursor(0, 0);     // Start at top-left corner
+    display.cp437(true);         // Use full 256 char 'Code Page 437' font
 
-  char buf[128];
-  float temp = 0.0;
-  float humd = 0.0;
-  byte range;
+    char buf[128];
+    float temp = 0.0;
+    float humd = 0.0;
+    byte range;
 
-  // Get temperature event and print its value.
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
-  if (isnan(event.temperature)) {
-    Serial.println(F("Error reading temperature!"));
-  }
-  else {
-    temp = event.temperature;
-    sprintf(buf, "Temp: %f", event.temperature);
-    display.println(buf);
+    // Get temperature event and print its value.
+    sensors_event_t event;
+    dht.temperature().getEvent(&event);
+    if (isnan(event.temperature)) {
+      Serial.println(F("Error reading temperature!"));
+    }
+    else {
+      temp = event.temperature;
+      sprintf(buf, "Temp: %f", event.temperature);
+      display.println(buf);
 
-    Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-  }
-  // Get humidity event and print its value.
-  dht.humidity().getEvent(&event);
-  if (isnan(event.relative_humidity)) {
-    Serial.println(F("Error reading humidity!"));
-  }
-  else {
-    humd = event.relative_humidity;
-    sprintf(buf, "Humd: %f", event.relative_humidity);
-    display.println(buf);
-    Serial.print(F("Humidity: "));
-    Serial.print(event.relative_humidity);
-    Serial.println(F("%"));
-  }
+      Serial.print(F("Temperature: "));
+      Serial.print(event.temperature);
+      Serial.println(F("°C"));
+    }
+    // Get humidity event and print its value.
+    dht.humidity().getEvent(&event);
+    if (isnan(event.relative_humidity)) {
+      Serial.println(F("Error reading humidity!"));
+    }
+    else {
+      humd = event.relative_humidity;
+      sprintf(buf, "Humd: %f", event.relative_humidity);
+      display.println(buf);
+      Serial.print(F("Humidity: "));
+      Serial.print(event.relative_humidity);
+      Serial.println(F("%"));
+    }
 
-  range = vl.readRange();
-  uint8_t status = vl.readRangeStatus();
+    range = vl.readRange();
+    uint8_t status = vl.readRangeStatus();
 
-  if (status == VL6180X_ERROR_NONE) {
-    sprintf(buf, "Range: %d", range);
-    display.println(buf);
-    Serial.print("Range: "); Serial.println(range);
-  }
+    if (status == VL6180X_ERROR_NONE) {
+      sprintf(buf, "Range: %d", range);
+      display.println(buf);
+      Serial.print("Range: "); Serial.println(range);
+    }
 
-  // Some error occurred, print it out!
-  if  ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
-    display.println("System error");
-    Serial.println("System error");
-  }
-  else if (status == VL6180X_ERROR_ECEFAIL) {
-    display.println("ECE failure");
-    Serial.println("ECE failure");
-  }
-  else if (status == VL6180X_ERROR_NOCONVERGE) {
-    display.println("No convergence");
-    Serial.println("No convergence");
-  }
-  else if (status == VL6180X_ERROR_RANGEIGNORE) {
-    display.println("Ignoring range");
-    Serial.println("Ignoring range");
-  }
-  else if (status == VL6180X_ERROR_SNR) {
-    display.println("Signal/Noise error");
-    Serial.println("Signal/Noise error");
-  }
-  else if (status == VL6180X_ERROR_RAWUFLOW) {
-    display.println("Raw reading underflow");
-    Serial.println("Raw reading underflow");
-  }
-  else if (status == VL6180X_ERROR_RAWOFLOW) {
-    display.println("Raw reading overflow");
-    Serial.println("Raw reading overflow");
-  }
-  else if (status == VL6180X_ERROR_RANGEUFLOW) {
-    display.println("Range reading underflow");
-    Serial.println("Range reading underflow");
-  }
-  else if (status == VL6180X_ERROR_RANGEOFLOW) {
-    display.println("Range reading overflow");
-    Serial.println("Range reading overflow");
-  }
+    // Some error occurred, print it out!
+    if  ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
+      display.println("System error");
+      Serial.println("System error");
+    }
+    else if (status == VL6180X_ERROR_ECEFAIL) {
+      display.println("ECE failure");
+      Serial.println("ECE failure");
+    }
+    else if (status == VL6180X_ERROR_NOCONVERGE) {
+      display.println("No convergence");
+      Serial.println("No convergence");
+    }
+    else if (status == VL6180X_ERROR_RANGEIGNORE) {
+      display.println("Ignoring range");
+      Serial.println("Ignoring range");
+    }
+    else if (status == VL6180X_ERROR_SNR) {
+      display.println("Signal/Noise error");
+      Serial.println("Signal/Noise error");
+    }
+    else if (status == VL6180X_ERROR_RAWUFLOW) {
+      display.println("Raw reading underflow");
+      Serial.println("Raw reading underflow");
+    }
+    else if (status == VL6180X_ERROR_RAWOFLOW) {
+      display.println("Raw reading overflow");
+      Serial.println("Raw reading overflow");
+    }
+    else if (status == VL6180X_ERROR_RANGEUFLOW) {
+      display.println("Range reading underflow");
+      Serial.println("Range reading underflow");
+    }
+    else if (status == VL6180X_ERROR_RANGEOFLOW) {
+      display.println("Range reading overflow");
+      Serial.println("Range reading overflow");
+    }
 
-  // region WiFi POST
-  if (WiFi.status() == WL_CONNECTED) {
-    SendToCloud(temp, humd, range);
-  }
-  else {
-    Serial.println("WiFi Disconnected");
-  }
-  // endregion WiFi POST
+    // region WiFi POST
+    if (WiFi.status() == WL_CONNECTED) {
+      SendToCloud(temp, humd, range);
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+    // endregion WiFi POST
 
-  // region Store data samples
-  Serial.print("Inserting data at position ");
-  Serial.print(insertionIndex);
-  Serial.print(". Temp=");
-  Serial.printf("%d", (char)((temp - tempBaseLine) * 10));
-  //temperatureSamples[insertionIndex] = (char)((temp - tempBaseLine)*10);
-  Serial.print(". RelHum=");
-  Serial.printf("%d", (char)humd);
-  humiditySamples[insertionIndex] = (char)humd;
-  Serial.print(". Range=");
-  Serial.printf("%d", (byte)range);
-  Serial.println();
-  rangeSamples[insertionIndex] = (byte)range;
+    // region Store data samples
+    Serial.print("Inserting data at position ");
+    Serial.print(insertionIndex);
+    Serial.print(". Temp=");
+    Serial.printf("%d", (char)((temp - tempBaseLine) * 10));
+    //temperatureSamples[insertionIndex] = (char)((temp - tempBaseLine)*10);
+    Serial.print(". RelHum=");
+    Serial.printf("%d", (char)humd);
+    humiditySamples[insertionIndex] = (char)humd;
+    Serial.print(". Range=");
+    Serial.printf("%d", (byte)range);
+    Serial.println();
+    rangeSamples[insertionIndex] = (byte)range;
 
-  insertionIndex++;
-  if (insertionIndex > maxSamples - 1) {
-    insertionIndex = 0;
+    insertionIndex++;
+    if (insertionIndex > maxSamples - 1) {
+      insertionIndex = 0;
+    }
+    // end Store data samples
+
+    display.display();
+  } else {
+    if (currentMillis % 5 == 0) {
+      bool isPushButtonDown = pushButton.onPress();
+      if (isPushButtonDown) {
+        HandleButtonPress();
+      }
+    }
   }
-  // end Store data samples
+}
 
-  display.display();
-  delay(5000);
+void HandleButtonPress() {
+  Serial.println("Button!");
 }
 
 void SendToCloud(float temp, float humd, byte range) {
   WiFiClient client;
   HTTPClient http;
   char buf[1024];
-
 
   // Your Domain name with URL path or IP address with path
   Serial.print("Sending data to ");
