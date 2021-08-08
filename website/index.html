@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	</head>
+	<body>
+		<h2>Sourdough Monitor</h2>
+		<input type="date" id="selectedDate" />
+		<div style="max-height: 33pc">
+			<canvas id="myChart"></canvas>
+		</div>
+	</body>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script>
+		const labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '24:00'];
+		const data = {
+			labels: labels,
+			datasets: [
+				{
+					label: '% Rise',
+					backgroundColor: 'rgb(255, 99, 132)',
+					borderColor: 'rgb(255, 99, 132)',
+					data: [0, 10, 5, 2, 20, 30, 28, 33, 34],
+				},
+			],
+		};
+		const config = {
+			type: 'line',
+			data,
+			options: {},
+		};
+
+		var myChart = new Chart(document.getElementById('myChart'), config);
+	</script>
+</html>
