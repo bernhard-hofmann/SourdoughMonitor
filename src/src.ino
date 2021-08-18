@@ -157,7 +157,7 @@ void loop() {
     }
     else {
       temp = event.temperature;
-      sprintf(buf, "Temp: %f", event.temperature);
+      sprintf(buf, "Temp: %.1f", event.temperature);
       display.println(buf);
 
       Serial.print(F("Temperature: "));
@@ -171,7 +171,7 @@ void loop() {
     }
     else {
       humd = event.relative_humidity;
-      sprintf(buf, "Humd: %f", event.relative_humidity);
+      sprintf(buf, "Humd: %.1f", event.relative_humidity);
       display.println(buf);
       Serial.print(F("Humidity: "));
       Serial.print(event.relative_humidity);
@@ -283,7 +283,7 @@ void SendToCloud(float temp, float humd, byte range) {
   http.addHeader("api-key", iotPlotterApiKey);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   // Data to send with HTTP POST
-  sprintf(buf, "{\"data\":{\"Temperature\":[{\"value\":%f}],\"Humidity\":[{\"value\":%f}], \"Range\":[{\"value\":%d}]}}", temp, humd, range);
+  sprintf(buf, "{\"data\":{\"Temperature\":[{\"value\":%.1f}],\"Humidity\":[{\"value\":%.1f}], \"Range\":[{\"value\":%d}]}}", temp, humd, range);
   Serial.print("Sending: "); Serial.println(buf);
   int httpResponseCode = http.POST(buf);
   Serial.print("HTTP: "); Serial.println(httpResponseCode);
