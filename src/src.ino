@@ -70,18 +70,35 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   pushButton.init();
 
-  Serial.begin(9600);
-
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;); // Don't proceed, loop forever
   }
   display.clearDisplay();
+  ShowProductScreen();
+
+  Serial.begin(9600);
 
   InitializeTempAndHumiditySensor();
   InitializeDistanceSensor();
   InitializeWiFi();
+}
+
+void ShowProductScreen() {
+  display.clearDisplay();
+
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+
+  const float version = 0.3;
+  display.println("Sourdough Monitor");
+  display.print("Version ");
+  display.println(version);
+  display.println("github:bernhard-hofmann/SourdoughMonitor");
+  display.display();
 }
 
 void InitializeTempAndHumiditySensor() {
@@ -157,7 +174,7 @@ void loop() {
     }
     else {
       temp = event.temperature;
-      sprintf(buf, "Temp: %.1f", event.temperature);
+      sprintf(buf, "Temp : %.1f", event.temperature);
       display.println(buf);
 
       Serial.print(F("Temperature: "));
@@ -171,7 +188,7 @@ void loop() {
     }
     else {
       humd = event.relative_humidity;
-      sprintf(buf, "Humd: %.1f", event.relative_humidity);
+      sprintf(buf, "Humd : %.1f", event.relative_humidity);
       display.println(buf);
       Serial.print(F("Humidity: "));
       Serial.print(event.relative_humidity);
@@ -225,15 +242,6 @@ void loop() {
       Serial.println("Range reading overflow");
     }
 
-    // region WiFi POST
-    if (WiFi.status() == WL_CONNECTED) {
-      SendToCloud(temp, humd, range);
-    }
-    else {
-      Serial.println("WiFi Disconnected");
-    }
-    // endregion WiFi POST
-
     // region Store data samples
     Serial.print("Inserting data at position ");
     Serial.print(insertionIndex);
@@ -255,6 +263,16 @@ void loop() {
     // end Store data samples
 
     display.display();
+
+    // region WiFi POST
+    if (WiFi.status() == WL_CONNECTED) {
+      SendToCloud(temp, humd, range);
+    }
+    else {
+      InitializeWiFi();
+      SendToCloud(temp, humd, range);
+    }
+    // endregion WiFi POST
   } else {
     if (currentMillis % 5 == 0) {
       bool isPushButtonDown = pushButton.onPress();
