@@ -54,7 +54,13 @@ Adafruit_VL6180X vl = Adafruit_VL6180X();
 word insertionIndex = 0;
 // 86400 = one value per 1 seconds for 24 hours
 // 17280 = one value per 5 seconds for 24 hours
-const int maxSamples = 17280;
+const int maxSamples = 128;
+/*
+   Notes for later
+   - store 128 values (one per pixel)
+   - store 17280/128 samples so that the next sample stored in the 128 wide array is an average of the last "however long each pixel represents"
+*/
+
 // Temperature is stored as 10x the difference from a baseline of 20 degrees C
 // E.g. 23.6C is +3.6C from 20C, stored as 36 (10x) (Max 127 = 20+12.7 = 32.7 Min -128 = 20-12.8 = 7.2)
 const byte tempBaseLine = 20;
@@ -151,17 +157,48 @@ void InitializeWiFi() {
   Serial.println(F("------------------------------------"));
 }
 
+void ShowStats(float temp, float humd, byte range) {
+  display.clearDisplay();
+
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+
+  char buf[128];
+
+  // Line 1: Temp
+  if (temp == -999999999) {
+    sprintf(buf, "Temp FAIL");
+  } else {
+    sprintf(buf, "Temp : %.1fC", temp);
+  }
+  Serial.println(buf);
+  display.println(buf);
+
+  // Line 2: Humidity
+  if (humd == -999999999) {
+    sprintf(buf, "Humidity FAIL");
+  } else {
+    sprintf(buf, "Humd : %.1f%%", temp);
+  }
+  Serial.println(buf);
+  display.println(buf);
+
+  // Line 3: Range
+  if (range >= 255) {
+    sprintf(buf, "Range FAIL");
+  } else {
+    sprintf(buf, "Range: %dmm", range);
+  }
+  display.println(buf);
+  Serial.println(buf);
+
+}
+
 void loop() {
   unsigned long currentMillis = millis();
   if (currentMillis % 5000 == 0) {
-    display.clearDisplay();
-
-    display.setTextSize(1);      // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE); // Draw white text
-    display.setCursor(0, 0);     // Start at top-left corner
-    display.cp437(true);         // Use full 256 char 'Code Page 437' font
-
-    char buf[128];
     float temp = 0.0;
     float humd = 0.0;
     byte range;
@@ -170,77 +207,67 @@ void loop() {
     sensors_event_t event;
     dht.temperature().getEvent(&event);
     if (isnan(event.temperature)) {
-      Serial.println(F("Error reading temperature!"));
+      temp = -999999999;
     }
     else {
       temp = event.temperature;
-      sprintf(buf, "Temp : %.1f", event.temperature);
-      display.println(buf);
-
-      Serial.print(F("Temperature: "));
-      Serial.print(event.temperature);
-      Serial.println(F("°C"));
     }
+
     // Get humidity event and print its value.
     dht.humidity().getEvent(&event);
     if (isnan(event.relative_humidity)) {
-      Serial.println(F("Error reading humidity!"));
+      humd = -999999999;
     }
     else {
       humd = event.relative_humidity;
-      sprintf(buf, "Humd : %.1f", event.relative_humidity);
-      display.println(buf);
-      Serial.print(F("Humidity: "));
-      Serial.print(event.relative_humidity);
-      Serial.println(F("%"));
     }
 
     range = vl.readRange();
     uint8_t status = vl.readRangeStatus();
 
-    if (status == VL6180X_ERROR_NONE) {
-      sprintf(buf, "Range: %d", range);
-      display.println(buf);
-      Serial.print("Range: "); Serial.println(range);
+    if (status != VL6180X_ERROR_NONE) {
+      range = 255;
     }
-
-    // Some error occurred, print it out!
-    if  ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
-      display.println("System error");
-      Serial.println("System error");
-    }
-    else if (status == VL6180X_ERROR_ECEFAIL) {
-      display.println("ECE failure");
-      Serial.println("ECE failure");
-    }
-    else if (status == VL6180X_ERROR_NOCONVERGE) {
-      display.println("No convergence");
-      Serial.println("No convergence");
-    }
-    else if (status == VL6180X_ERROR_RANGEIGNORE) {
-      display.println("Ignoring range");
-      Serial.println("Ignoring range");
-    }
-    else if (status == VL6180X_ERROR_SNR) {
-      display.println("Signal/Noise error");
-      Serial.println("Signal/Noise error");
-    }
-    else if (status == VL6180X_ERROR_RAWUFLOW) {
-      display.println("Raw reading underflow");
-      Serial.println("Raw reading underflow");
-    }
-    else if (status == VL6180X_ERROR_RAWOFLOW) {
-      display.println("Raw reading overflow");
-      Serial.println("Raw reading overflow");
-    }
-    else if (status == VL6180X_ERROR_RANGEUFLOW) {
-      display.println("Range reading underflow");
-      Serial.println("Range reading underflow");
-    }
-    else if (status == VL6180X_ERROR_RANGEOFLOW) {
-      display.println("Range reading overflow");
-      Serial.println("Range reading overflow");
-    }
+    /*
+        // Some error occurred, print it out!
+        if  ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
+          display.println("System error");
+          Serial.println("System error");
+        }
+        else if (status == VL6180X_ERROR_ECEFAIL) {
+          display.println("ECE failure");
+          Serial.println("ECE failure");
+        }
+        else if (status == VL6180X_ERROR_NOCONVERGE) {
+          display.println("No convergence");
+          Serial.println("No convergence");
+        }
+        else if (status == VL6180X_ERROR_RANGEIGNORE) {
+          display.println("Ignoring range");
+          Serial.println("Ignoring range");
+        }
+        else if (status == VL6180X_ERROR_SNR) {
+          display.println("Signal/Noise error");
+          Serial.println("Signal/Noise error");
+        }
+        else if (status == VL6180X_ERROR_RAWUFLOW) {
+          display.println("Raw reading underflow");
+          Serial.println("Raw reading underflow");
+        }
+        else if (status == VL6180X_ERROR_RAWOFLOW) {
+          display.println("Raw reading overflow");
+          Serial.println("Raw reading overflow");
+        }
+        else if (status == VL6180X_ERROR_RANGEUFLOW) {
+          display.println("Range reading underflow");
+          Serial.println("Range reading underflow");
+        }
+        else if (status == VL6180X_ERROR_RANGEOFLOW) {
+          display.println("Range reading overflow");
+          Serial.println("Range reading overflow");
+        }
+    */
+    ShowStats(temp, humd, range);
 
     // region Store data samples
     Serial.print("Inserting data at position ");
