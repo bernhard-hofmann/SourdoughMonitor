@@ -228,45 +228,7 @@ void loop() {
     if (status != VL6180X_ERROR_NONE) {
       range = 255;
     }
-    /*
-        // Some error occurred, print it out!
-        if  ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
-          display.println("System error");
-          Serial.println("System error");
-        }
-        else if (status == VL6180X_ERROR_ECEFAIL) {
-          display.println("ECE failure");
-          Serial.println("ECE failure");
-        }
-        else if (status == VL6180X_ERROR_NOCONVERGE) {
-          display.println("No convergence");
-          Serial.println("No convergence");
-        }
-        else if (status == VL6180X_ERROR_RANGEIGNORE) {
-          display.println("Ignoring range");
-          Serial.println("Ignoring range");
-        }
-        else if (status == VL6180X_ERROR_SNR) {
-          display.println("Signal/Noise error");
-          Serial.println("Signal/Noise error");
-        }
-        else if (status == VL6180X_ERROR_RAWUFLOW) {
-          display.println("Raw reading underflow");
-          Serial.println("Raw reading underflow");
-        }
-        else if (status == VL6180X_ERROR_RAWOFLOW) {
-          display.println("Raw reading overflow");
-          Serial.println("Raw reading overflow");
-        }
-        else if (status == VL6180X_ERROR_RANGEUFLOW) {
-          display.println("Range reading underflow");
-          Serial.println("Range reading underflow");
-        }
-        else if (status == VL6180X_ERROR_RANGEOFLOW) {
-          display.println("Range reading overflow");
-          Serial.println("Range reading overflow");
-        }
-    */
+
     ShowStats(temp, humd, range);
 
     // region Store data samples
@@ -274,7 +236,7 @@ void loop() {
     Serial.print(insertionIndex);
     Serial.print(". Temp=");
     Serial.printf("%d", (char)((temp - tempBaseLine) * 10));
-    //temperatureSamples[insertionIndex] = (char)((temp - tempBaseLine)*10);
+    temperatureSamples[insertionIndex] = (char)((temp - tempBaseLine)*10);
     Serial.print(". RelHum=");
     Serial.printf("%d", (char)humd);
     humiditySamples[insertionIndex] = (char)humd;
