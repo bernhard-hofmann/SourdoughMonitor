@@ -89,7 +89,7 @@ void ShowProductScreen() {
   display.clearDisplay();
 
   display.setTextSize(1);      // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE, SSD1306_BLACK); // Draw white text on black
   display.setCursor(0, 0);     // Start at top-left corner
   display.cp437(true);         // Use full 256 char 'Code Page 437' font
 
@@ -262,6 +262,7 @@ void loop() {
     }
     // end Store data samples
 
+    display.println("Logging data...");
     display.display();
 
     // region WiFi POST
@@ -308,4 +309,15 @@ void SendToCloud(float temp, float humd, byte range) {
 
   // Free resources
   http.end();
+
+  display.fillRect(0, 24, 128, 8, SSD1306_BLACK);
+  display.display();
+  display.setCursor(0, 24);
+  if (httpResponseCode >= 200 && httpResponseCode < 300) {
+    display.println("Data logged OK");
+  } else {
+    sprintf(buf, "Logging FAILED: %d", httpResponseCode);
+    display.println(buf);
+  }
+  display.display();
 }
