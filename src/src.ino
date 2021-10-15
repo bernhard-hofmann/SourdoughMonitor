@@ -290,7 +290,29 @@ void SendToCloud(float temp, float humd, byte range) {
   // Specify content-type header
   http.addHeader("api-key", iotPlotterApiKey);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
   // Data to send with HTTP POST
+  if (temp > 50) {
+    temp = 50;
+  }
+  if (temp < 0) {
+    temp = 0;
+  }
+
+  if (humd > 100) {
+    humd = 100;
+  }
+  if (humd < 0) {
+    humd = 0;
+  }
+
+  if (range > 100) {
+    range = 100;
+  }
+  if (range < 0) {
+    range = 0;
+  }
+
   sprintf(buf, "{\"data\":{\"Temperature\":[{\"value\":%.1f}],\"Humidity\":[{\"value\":%.1f}], \"Range\":[{\"value\":%d}]}}", temp, humd, range);
   Serial.print("Sending: "); Serial.println(buf);
   int httpResponseCode = http.POST(buf);
